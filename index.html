@@ -269,6 +269,10 @@ figure{margin:6px 0}figure img{width:100%;border-radius:28px;display:block;curso
   .scroll{padding-left:8px;padding-right:8px}
 }
 #syncBtn svg{width:22px;height:22px}
+#refreshBtn svg{width:22px;height:22px}
+#refreshBtn.spin svg{animation:m3espin .9s linear infinite}
+@keyframes m3espin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#refreshBtn.spin svg{animation-duration:1.6s}}
 .offchip{margin:8px 16px 0;padding:9px 14px;border-radius:14px;background:var(--sch);color:var(--osv);
   font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center;animation:pop .4s var(--spring) both}
 .offchip[hidden]{display:none}
@@ -462,7 +466,7 @@ figure{margin:6px 0}figure img{width:100%;border-radius:28px;display:block;curso
 </style></head><body>
 <div class="app" id="app">
  <header><button class="ib" id="menuBtn" aria-label="Open sidebar"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
-  <div class="tt"><h1 id="h1">Workspace</h1><p id="count"></p></div><button class="ib" id="syncBtn" aria-label="Set up sync"></button><button class="ib" id="theme" aria-label="Toggle dark theme"></button></header>
+  <div class="tt"><h1 id="h1">Workspace</h1><p id="count"></p></div><button class="ib" id="refreshBtn" aria-label="Refresh and sync" title="Refresh and sync"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button><button class="ib" id="syncBtn" aria-label="Set up sync"></button><button class="ib" id="theme" aria-label="Toggle dark theme"></button></header>
  <label class="search"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input id="q" placeholder="Search all pages" aria-label="Search pages"></label>
  <div class="group" id="views" role="radiogroup"><button data-v="gallery" class="on">Gallery</button><button data-v="table">Table</button><button data-v="list">List</button><button data-v="board">Board</button><button data-v="cal">Calendar</button></div>
  <div class="offchip" id="offchip" hidden><span>☁️</span><span>Offline — everything is saved on this device</span></div>
@@ -1106,7 +1110,13 @@ window.__raw = function (id, ok, text) {
 function webReq(method, url, body) {
   const opt = { method: method, headers: {}, cache: 'no-store' };
   if (body != null && body !== '') {
-    opt.headers['Content-Type'] = 'application/json';
+    /* A write with Content-Type: application/json makes the browser send a CORS
+       preflight first, and the simple key-value stores this app syncs through
+       do not answer it - so every push and pull failed with "Failed to fetch".
+       text/plain is a CORS-safelisted type: the write goes straight out with no
+       preflight. The body is still the same JSON; the server parses it as JSON
+       either way. */
+    opt.headers['Content-Type'] = 'text/plain';
     opt.body = body;
   }
   return fetch(url, opt).then(function (r) {
@@ -1778,6 +1788,32 @@ if (dr2) dr2.addEventListener('click', function (e) {
 
 const sb = document.getElementById('syncBtn');
 if (sb) sb.onclick = function () { sheetIsSync = true; syncSheet(); };
+
+/* The header refresh button. A desktop has no pull-to-refresh gesture, so this
+   is the way to ask for a round by hand: read what the other devices have, then
+   send this one's changes. It does the same work as the automatic cycle, on
+   demand, and says what happened. */
+async function manualRefresh() {
+  const b = document.getElementById('refreshBtn');
+  if (b) b.classList.add('spin');
+  try {
+    if (SY.acct && SY.acct.user) {
+      await acctSeed();
+      try { render(); renderDrawer(); } catch (e) {}
+      snack(SY.lastError ? ('Sync: ' + SY.lastError) : 'Up to date', 0);
+    } else if (signedIn()) {
+      const r = await autoSync('manual', true);
+      snack(r && r.added ? ('Brought in ' + r.added + ' page' + (r.added === 1 ? '' : 's')) : 'Up to date', 0);
+    } else {
+      snack('Set up sync in the menu (\u2630 \u2192 Sync)', 0);
+    }
+  } catch (e) {
+    snack('Could not sync', 0);
+  }
+  if (b) b.classList.remove('spin');
+}
+const rb = document.getElementById('refreshBtn');
+if (rb) rb.onclick = function () { manualRefresh(); };
 
 const _rd = renderDrawer;
 renderDrawer = function () {

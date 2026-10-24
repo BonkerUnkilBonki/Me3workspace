@@ -33,6 +33,11 @@ Use the same code (or the same account) on every device and they share the same
 notes. Sync runs on its own: it pulls every few seconds, pushes as soon as you
 change something, and merges before it writes, so nothing is overwritten.
 
+There is a **refresh button in the header** (the circular arrow, top right) for
+asking for a round by hand — handy on a desktop, where there is no pull-to-
+refresh gesture. It reads what your other devices have and sends this one's
+changes, then tells you what it did.
+
 **Where your notes are kept.** On a static site there is no server of your own,
 so the shared copy lives in free public key-value stores that need no account
 (setget.net, then mantledb.sh as a backup). The key is derived on your device

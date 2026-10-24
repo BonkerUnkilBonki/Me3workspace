@@ -3,7 +3,7 @@
    localStorage, so the app is fully usable with no network). Navigations are
    network-first so a new deploy is picked up immediately; static assets are
    cache-first for speed. Bump CACHE when the shell changes. */
-const CACHE = 'm3e-shell-v1';
+const CACHE = 'm3e-shell-v2';
 const SHELL = ['./', './index.html', './config.js', './vendor/sync.bundle.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
